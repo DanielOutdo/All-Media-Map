@@ -101,6 +101,21 @@ var CSS = ""
 + ".onmuk-map .leaflet-tooltip{background:#fff;color:#3A383D;border:1px solid #D6D5D8;border-radius:12px;padding:8px 12px;font:500 14px/1.35 'Inter',sans-serif;box-shadow:0 4px 14px rgba(58,56,61,.18)}"
 + ".onmuk-map .leaflet-popup-content-wrapper{border-radius:16px;box-shadow:0 6px 20px rgba(58,56,61,.2)}"
 + ".onmuk-map .leaflet-popup-content{margin:14px 18px;font:400 14px/1.45 'Inter',sans-serif;color:#3A383D}"
+// Another map plugin on the site makes every Leaflet popup and tooltip transparent with !important
+// (.leaflet-popup-content-wrapper, .leaflet-tooltip, .leaflet-popup-tip-container). These scoped
+// !important rules win it back for this map only, and reset the site's p size and Leaflet's p margins.
++ ".onmuk-map .leaflet-popup{margin:0 0 20px!important;background:none!important;box-shadow:none!important}"
++ ".onmuk-map .leaflet-popup-content-wrapper{background:#fff!important;padding:1px!important;border:0!important;border-radius:16px!important;box-shadow:0 6px 20px rgba(26,27,30,.22)!important;text-align:left}"
++ ".onmuk-map .leaflet-popup-content{margin:14px 18px!important;padding:0!important;background:none!important;width:auto!important;min-width:230px;max-width:290px;font:400 14px/1.45 'Inter',sans-serif!important;color:#3A383D!important}"
++ ".onmuk-map .leaflet-popup-content p{margin:0!important;font-size:14px!important;line-height:1.45!important}"
++ ".onmuk-map .leaflet-popup-content p.onmuk-pop-n{font-size:17px!important;line-height:1.25!important;margin:0 0 4px!important}"
++ ".onmuk-map .leaflet-popup-content .onmuk-pop-row p.onmuk-pop-n{font-size:15px!important}"
++ ".onmuk-map .leaflet-popup-tip-container{display:block!important}"
++ ".onmuk-map .leaflet-popup-tip{background:#fff!important;box-shadow:0 3px 10px rgba(26,27,30,.18)!important}"
++ ".onmuk-map .leaflet-popup-close-button{color:#6B6970!important;font:400 20px/24px 'Inter',sans-serif!important;width:28px!important;height:28px!important;top:6px!important;right:6px!important;text-decoration:none!important}"
++ ".onmuk-map .leaflet-tooltip{background:#fff!important;color:#3A383D!important;border:1px solid #D6D5D8!important;border-radius:12px!important;padding:8px 12px!important;font:500 14px/1.35 'Inter',sans-serif!important;box-shadow:0 4px 14px rgba(58,56,61,.18)!important;white-space:nowrap}"
++ ".onmuk-map .leaflet-tooltip-top{margin-top:-8px!important}.onmuk-map .leaflet-tooltip-bottom{margin-top:8px!important}.onmuk-map .leaflet-tooltip-left{margin-left:-8px!important}.onmuk-map .leaflet-tooltip-right{margin-left:8px!important}"
++ ".onmuk-title{margin:0 0 24px}"
 + ".onmuk-pop-f{display:inline-flex;align-items:center;gap:6px;font:600 12px 'Inter',sans-serif;color:"+NAVY+";background:"+ORANGE+";border-radius:9999px;padding:4px 10px;margin-bottom:8px}"
 + ".onmuk-pop-n{font:700 17px/1.25 'Bricolage Grotesque','Inter',sans-serif;letter-spacing:-.01em;margin:0 0 4px;color:"+NAVY+"}"
 + ".onmuk-pop-d{color:#6B6970;margin:0}"
@@ -148,7 +163,7 @@ var CSS = ""
 + ".onmuk-dw .onmuk-wf .w-form-done{background:rgba(255,179,0,.12);color:#fff}"
 + ".onmuk-dw .onmuk-new{margin-top:16px!important;color:#fff!important;border-color:#fff!important}.onmuk-dw .onmuk-new:hover{background:"+ORANGE+"!important;border-color:"+ORANGE+"!important;color:"+NAVY+"!important}"
 // The Webflow form stays out of sight in its original spot; it only appears inside the drawer
-+ ".w-form:has(form[data-name=\""+FORM_NAME_CSS+"\"]):not(.onmuk-wf){display:none!important}";
++ ".w-form:has(form[data-name=\""+FORM_NAME_CSS+"\"]):not(.onmuk-wf),.w-form:has(#wf-form-All-Media-Map-Enquiry):not(.onmuk-wf),.w-form:has([name=\"Selected-Sites\"]):not(.onmuk-wf){display:none!important}";
 var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
 
 function withLeaflet(cb){
@@ -177,7 +192,11 @@ function arm(n){
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){arm(25)}); else arm(25);
 
 var SITES={}, SEL=[], DW=null, TRAY=null;
-try{ SEL=JSON.parse(localStorage.getItem('onmuk-sel')||'[]')||[]; }catch(e){ SEL=[]; }
+try{ SEL=JSON.parse(localStorage.getItem('onmuk-sel')||'[]'); }catch(e){ SEL=[]; }
+SEL=(Array.isArray(SEL)?SEL:[]).filter(function(x){
+  return x && typeof x.id==='string' && typeof x.f==='string' && typeof x.n==='string' && Array.isArray(x.ll)
+    && typeof x.ll[0]==='number' && typeof x.ll[1]==='number' && isFinite(x.ll[0]) && isFinite(x.ll[1]);
+}).slice(0,200).map(function(x){ return {id:x.id.slice(0,40),f:x.f.slice(0,60),n:x.n.slice(0,200),d:'',r:String(x.r||'').slice(0,60),ll:[x.ll[0],x.ll[1]]}; });
 function selHas(id){ for(var i=0;i<SEL.length;i++) if(SEL[i].id===id) return true; return false; }
 function selToggle(id){
   if(selHas(id)) SEL=SEL.filter(function(x){return x.id!==id});
@@ -195,7 +214,9 @@ function selSave(){
 // own success / error messages. Its hidden fields are filled from the selection just before it submits.
 var WF=null; // {wrap, form, done, fail}
 function findWebflowForm(){
-  var form=document.querySelector('form[data-name="'+FORM_NAME+'"]') || document.querySelector('[data-onmuk-form] form');
+  var form=document.querySelector('form[data-name="'+FORM_NAME+'"]') || document.getElementById('wf-form-All-Media-Map-Enquiry')
+    || document.querySelector('[data-onmuk-form] form');
+  if(!form){ var f=document.querySelector('.w-form form [name="Selected-Sites"]'); if(f) form=f.form; }
   if(!form) return null;
   var wrap=form.closest('.w-form') || form.parentNode;
   return {wrap:wrap, form:form, done:wrap.querySelector('.w-form-done'), fail:wrap.querySelector('.w-form-fail')};
@@ -284,7 +305,9 @@ function drawFlag(ctx,p){
 function shapeMarker(draw){ return L.CircleMarker.extend({ _updatePath:function(){ var r=this._renderer; if(!r._drawing||this._empty()) return; draw(r._ctx,this._point); } }); }
 var RoundMarker=null, FlagMarker=null;
 
-function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]}); }
+// Title text: escaped first, then [words] become the site's orange highlight span
+function titleHtml(t){ return esc(t).replace(/\[([^\[\]]{1,80})\]/g,'<span class="text-color-secondary">$1</span>'); }
 
 function init(D,sec){
   function pick(cls){ return sec.querySelector('.'+cls) || sec.querySelector('#'+cls); }
@@ -327,6 +350,11 @@ function init(D,sec){
       else { v=+v; var i=rsel.indexOf(v); if(e.target.checked){ if(i<0) rsel.push(v); } else if(i>=0) rsel.splice(i,1); }
       sync(true);
     });
+  }
+  if(ds.title!=='false' && !sec.querySelector('.onmuk-title')){
+    var tt=document.createElement('h2'); tt.className='onmuk-title heading-style-h2';
+    tt.innerHTML=titleHtml(cms(ds.title) || 'Find [Outdoor Advertising] near you');
+    sec.insertBefore(tt, sec.firstChild);
   }
   if(ds.intro!=='false' && !sec.querySelector('.onmuk-help')){
     var steps=(ds.intro && ds.intro!=='true') ? ds.intro.split('|') : [
@@ -491,4 +519,7 @@ function init(D,sec){
   setTimeout(refitSize,200); window.addEventListener('resize',refitSize);
   if('ResizeObserver' in window) new ResizeObserver(refitSize).observe(mapEl);
 }
+// Set up the drawer (and move the Webflow form into it) straight away, so the form never shows on the page
+function early(){ if(document.querySelector('.onmuk')) try{ ensureDrawer(); }catch(e){ console.error('Outdo map: drawer setup failed', e); } }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',early); else early();
 })();
