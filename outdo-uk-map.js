@@ -236,6 +236,8 @@ function setField(name,val){
 function fillHidden(){
   setField('Selected-Sites',selText()); setField('Selected-Count',String(SEL.length));
   setField('Location',locName()); setField('URL',location.href); setField('Form Name',FORM_NAME);
+  // Older names the form's hidden fields carried before they were renamed; a stale publish can bring them back
+  setField('Selected-Route',selText()); setField('Route-Area',String(SEL.length));
 }
 function ensureDrawer(){
   if(DW) return;
