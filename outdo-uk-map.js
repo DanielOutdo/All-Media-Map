@@ -169,13 +169,17 @@ var st = document.createElement('style'); st.textContent = CSS; document.head.ap
 function withLeaflet(cb){
   if(window.L && window.L.map) return cb();
   if(!document.querySelector('script[data-onm-leaflet]')){
-    var s = document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.setAttribute('data-onm-leaflet','1'); document.head.appendChild(s);
-    if(!document.querySelector('link[href*="leaflet.css"]')){ var lk=document.createElement('link'); lk.rel='stylesheet'; lk.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lk); }
+    // Subresource Integrity: the browser refuses Leaflet if unpkg ever serves a changed file
+    var s = document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.setAttribute('data-onm-leaflet','1');
+    s.integrity='sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH'; s.crossOrigin='anonymous'; document.head.appendChild(s);
+    if(!document.querySelector('link[href*="leaflet.css"]')){ var lk=document.createElement('link'); lk.rel='stylesheet'; lk.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      lk.integrity='sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H'; lk.crossOrigin='anonymous'; document.head.appendChild(lk); }
   }
   var tries=0;(function wait(){ if(window.L&&window.L.map) return cb(); if(++tries>100) return console.error('Outdo map: Leaflet failed to load'); setTimeout(wait,100); })();
 }
 var dataP=null;
-function getData(){ if(!dataP) dataP=fetch(DATA_URL).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); return dataP; }
+// CFG.dataIntegrity (an sha384 hash) makes the browser reject a data file that has been altered
+function getData(){ if(!dataP) dataP=fetch(DATA_URL, CFG.dataIntegrity ? {integrity:CFG.dataIntegrity} : {}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); return dataP; }
 function start(sec){
   if(sec.__onmuk) return; sec.__onmuk=true;
   getData().then(function(d){ withLeaflet(function(){ init(d,sec); }); })
