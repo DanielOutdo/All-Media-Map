@@ -8,7 +8,11 @@ var FORM_NAME = CFG.formName || 'All Media Map Enquiry', FORM_NAME_CSS = FORM_NA
 var ORANGE='var(--base-color-brand--outdo-orange,#ffb300)', NAVY='var(--base-color-brand--outdo-navy,#1a1b1e)', GREY='var(--base-color-brand--outdo-grey,#3a383d)';
 // CMS values arrive as text; an empty field or an unbound "{{Field}}" placeholder counts as unset
 function cms(v){ v=String(v||'').trim(); return v.indexOf('{{')===-1 ? v : ''; }
-function locName(){ var s=document.querySelector('.onmuk[data-name]'); return s ? cms(s.getAttribute('data-name')) : ''; }
+// CMS values can also come from a separate element bound in the Designer, for when the embed sits
+// inside a component (where embeds cannot bind CMS fields): <div data-onmuk-cms data-name data-lat data-lng data-type>
+function cmsAttr(sec,k){ var v=sec ? cms(sec.getAttribute('data-'+k)) : ''; if(v) return v;
+  var el=document.querySelector('[data-onmuk-cms]'); return el ? cms(el.getAttribute('data-'+k)) : ''; }
+function locName(){ return cmsAttr(document.querySelector('.onmuk'),'name'); }
 
 var FORMATS = [
   {k:'roundabout', label:'Roundabouts & roadside', one:'Roundabout & roadside'},
@@ -321,14 +325,16 @@ function init(D,sec){
   var regions=D.regions, rsel=[], on={}; FORMATS.forEach(function(f){ on[f.k]=true; });
   // Per-map options (data attributes on the .onmuk section)
   var ds=sec.dataset, nums=function(v){ return String(v||'').split(',').map(parseFloat).filter(function(n){return !isNaN(n)}); };
-  var optCenter=nums(ds.center), optZoom=parseFloat(ds.zoom), optBounds=nums(ds.bounds);
+  var optCenter=nums(cms(ds.center)), optZoom=parseFloat(ds.zoom), optBounds=nums(ds.bounds);
+  if(optCenter.length!==2) optCenter=nums(cmsAttr(null,'lat')+','+cmsAttr(null,'lng'));
+  if(optCenter.length===2 && (Math.abs(optCenter[0])>90 || Math.abs(optCenter[1])>180)) optCenter=[];
   var lock=ds.lockRegion!==undefined && ds.lockRegion!=='false';
   var urlSync=ds.urlSync ? ds.urlSync!=='false' : document.querySelectorAll('.onmuk').length===1;
   if(ds.region){ ds.region.split(',').forEach(function(n){ n=n.trim(); var ri=regions.indexOf(n); if(ri>=0) rsel.push(ri); else if(n) console.warn('Outdo map: unknown region "'+n+'"'); }); }
   var homeRegion=rsel.slice();
   function sameHome(){ return rsel.slice().sort().join()===homeRegion.slice().sort().join(); }
   // data-type: a format name filters the map; a place type sets the zoom
-  var ty=cms(ds.type).toLowerCase();
+  var ty=cmsAttr(sec,'type').toLowerCase();
   if(ty){
     var fmap={'roundabouts & roadside':'roundabout',roadside:'roundabout',ferry:'ferry',ferries:'ferry',calmac:'ferry','calmac ferries':'ferry','6-sheet':'sixsheet','6-sheets':'sixsheet','illuminated 6-sheets':'sixsheet',tfl:'tfl','tfl poster sites':'tfl',poster:'tfl',digital:'digital','digital screen':'digital','digital screens':'digital','dog bag':'dogbag','dog bag stations':'dogbag',roundabout:'roundabout',roundabouts:'roundabout',lamppost:'lamppost',lampposts:'lamppost','lamppost banner':'lamppost','lamppost banners':'lamppost',bus:'bus','bus network':'bus','bus networks':'bus','bus & tram':'bus',airport:'airport',airports:'airport'};
     var zmap={city:11,town:12.5,village:13.5,county:9,region:8,country:6};
