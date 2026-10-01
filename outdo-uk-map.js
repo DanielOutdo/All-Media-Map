@@ -233,6 +233,13 @@ function setField(name,val){
   if(!WF) return;
   WF.form.querySelectorAll('[name="'+name+'"],[data-name="'+name+'"]').forEach(function(el){ el.value=val; el.dispatchEvent(new Event('input',{bubbles:true})); });
 }
+// The Designer can publish stale field names (two fields both "field-9"), but the element ids are
+// reliable, so name each field from its id. Webflow names submitted fields by data-name.
+function normalizeFields(form){
+  ['Selected-Sites','Selected-Count','Location','Message'].forEach(function(k){
+    var el=form.querySelector('#'+k); if(el){ el.name=k; el.setAttribute('data-name',k); }
+  });
+}
 function fillHidden(){
   setField('Selected-Sites',selText()); setField('Selected-Count',String(SEL.length));
   setField('Location',locName()); setField('URL',location.href); setField('Form Name',FORM_NAME);
@@ -264,7 +271,7 @@ function ensureDrawer(){
     console.warn('Outdo map: no Webflow form named "'+FORM_NAME+'" on this page, so enquiries are switched off. Add the All Media Map Enquiry Form component.');
     slot.hidden=true;
   } else {
-    slot.appendChild(WF.wrap); WF.wrap.classList.add('onmuk-wf');
+    slot.appendChild(WF.wrap); WF.wrap.classList.add('onmuk-wf'); normalizeFields(WF.form);
     // Capture phase on document runs before Webflow's own submit handler, so an empty selection never sends
     document.addEventListener('submit',function(e){
       if(e.target!==WF.form) return;
