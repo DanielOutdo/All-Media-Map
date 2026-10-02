@@ -74,7 +74,12 @@ var CSS = ""
 + ".onmuk-ms-opt .c{margin-left:auto;padding-left:16px;color:#6B6970;font-weight:400}"
 + ".onmuk-key{background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(58,56,61,.18);padding:12px 14px 8px;min-width:250px;font-family:'Inter',sans-serif;color:#3A383D;margin:0 0 16px 16px!important}"
 + ".onmuk-key{max-height:min(440px,60vh);overflow:auto}"
-+ ".onmuk-key h4{margin:0 0 4px;font:700 11px 'Inter',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#6B6970}"
++ ".onmuk .onmuk-key-tg,button.onmuk-key-tg{display:flex!important;align-items:center;justify-content:space-between;gap:14px;width:100%;margin:0!important;padding:2px 0 6px!important;background:none!important;border:0!important;box-shadow:none!important;cursor:pointer;font:700 11px/1.2 'Inter',sans-serif!important;letter-spacing:.06em!important;text-transform:uppercase!important;color:#6B6970!important}"
++ ".onmuk-key-tg .cv{width:7px;height:7px;flex:none;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform 200ms cubic-bezier(.2,.8,.2,1)}"
++ ".onmuk-key-tg[aria-expanded=false] .cv{transform:translateY(2px) rotate(-135deg)}"
++ ".onmuk-key.closed{min-width:0!important;padding:10px 16px!important}"
++ ".onmuk-key.closed .onmuk-key-tg{padding:0!important;color:#3A383D!important;font-size:12px!important}"
++ ".onmuk-key-rows[hidden]{display:none!important}"
 + ".onmuk .onmuk-key-row,button.onmuk-key-row{display:flex!important;align-items:center;gap:10px;width:100%;margin:0!important;padding:8px 0!important;background:none!important;border:0!important;border-top:1px solid #EDECEF!important;cursor:pointer;font:500 14px/1.3 'Inter',sans-serif!important;color:#3A383D!important;text-align:left;text-transform:none!important;letter-spacing:normal!important;box-shadow:none!important}"
 + ".onmuk-key-row:first-of-type{border-top:0!important}"
 + ".onmuk-key-row .ic{width:20px;display:flex;justify-content:center;flex:none}"
@@ -471,9 +476,23 @@ function init(D,sec){
   var custom = optBounds.length===4 || optCenter.length===2;
   function goHome(){
     if(optBounds.length===4) map.fitBounds(L.latLngBounds([[optBounds[0],optBounds[1]],[optBounds[2],optBounds[3]]]),{padding:[20,20]});
-    else if(optCenter.length===2) map.setView([optCenter[0],optCenter[1]], isNaN(optZoom)?11:optZoom);
+    else if(optCenter.length===2){
+      var z=isNaN(optZoom)?11:optZoom; map.setView([optCenter[0],optCenter[1]], z, {animate:false});
+      // A town with few sites close by would open on an empty map, so step out until a handful show.
+      // An explicit data-zoom on the embed is respected as-is.
+      if(isNaN(parseFloat(ds.zoom))) while(sitesInView()<MIN_IN_VIEW && z>7){ z-=1; map.setView([optCenter[0],optCenter[1]], z, {animate:false}); }
+    }
     else return false;
     return true;
+  }
+  var MIN_IN_VIEW=3;
+  function sitesInView(){
+    var b=map.getBounds(), c=map.getCenter(), n=0;
+    FORMATS.forEach(function(f){ if(!on[f.k]) return; items[f.k].forEach(function(it){ if(!inRegion(it)) return;
+      for(var i=0;i<it.ll.length;i++){ if(b.contains(it.ll[i])){ n++; return; } }
+      if(f.k==='bus' && inRing(c.lat,c.lng,it.ll)) n++;
+    }); });
+    return n;
   }
 
   function inRegion(it){ return !rsel.length||rsel.indexOf(it.r)!==-1; }
@@ -491,13 +510,19 @@ function init(D,sec){
   }
   var KeyCtl=L.Control.extend({options:{position:'bottomleft'},onAdd:function(){
     var d=L.DomUtil.create('div','onmuk-key'); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
-    d.addEventListener('click',function(e){ var b=e.target.closest('button[data-k]'); if(!b) return; var k=b.getAttribute('data-k'); on[k]=!on[k]; sync(false); });
+    d.addEventListener('click',function(e){
+      if(e.target.closest('.onmuk-key-tg')){ keyOpen=!keyOpen; renderChips(); return; }
+      var b=e.target.closest('button[data-k]'); if(!b) return; var k=b.getAttribute('data-k'); on[k]=!on[k]; sync(false); });
     return d; }});
   var keyEl=new KeyCtl().addTo(map).getContainer();
+  // The key starts minimised on phones, where it would cover much of the map, and open elsewhere
+  var keyOpen=!(window.matchMedia && window.matchMedia('(max-width:640px)').matches);
   function renderChips(){
-    keyEl.innerHTML='<h4>Key</h4>'+FORMATS.map(function(f){
+    keyEl.classList.toggle('closed',!keyOpen);
+    keyEl.innerHTML='<button type="button" class="onmuk-key-tg" aria-expanded="'+keyOpen+'">'+(keyOpen?'Key':'Show key')+'<span class="cv" aria-hidden="true"></span></button>'
+      +'<div class="onmuk-key-rows"'+(keyOpen?'':' hidden')+'>'+FORMATS.map(function(f){
       return '<button type="button" class="onmuk-key-row" data-k="'+f.k+'" aria-pressed="'+on[f.k]+'" aria-label="'+(on[f.k]?'Hide ':'Show ')+esc(f.label)+'"><span class="ic">'+SW[f.k]+'</span><span class="l">'+esc(f.label)+'</span><span class="n">'+count(f.k).toLocaleString('en-GB')+'</span><span class="sw" aria-hidden="true"></span></button>';
-    }).join('');
+    }).join('')+'</div>';
   }
   if(resetEl) resetEl.addEventListener('click',function(){ rsel=homeRegion.slice(); on=JSON.parse(JSON.stringify(homeOn)); firstFit=true; sync(true); });
 
