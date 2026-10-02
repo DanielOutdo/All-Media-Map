@@ -90,8 +90,10 @@ var CSS = ""
 + ".onmuk-key-row[aria-pressed=true] .sw:after{transform:translateX(14px)}"
 + ".onmuk-key-row[aria-pressed=false] .ic,.onmuk-key-row[aria-pressed=false] .l,.onmuk-key-row[aria-pressed=false] .n{opacity:.45}"
 + "@media(max-width:640px){.onmuk-key{min-width:0;padding:8px 10px 4px;margin:0 0 10px 10px!important}.onmuk .onmuk-key-row{font-size:13px!important;padding:6px 0!important;gap:8px}}"
-+ ".onmuk-help{list-style:none;margin:0!important;padding:0!important;flex:1 1 0;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:0 20px;font:400 14px/1.3 'Inter',sans-serif;color:inherit}"
-+ ".onmuk-help li{display:flex;align-items:center;gap:8px;margin:0!important;padding:0!important;min-width:0;text-wrap:balance}"
++ ".onmuk-help{list-style:none;margin:0!important;padding:0!important;flex:1 1 0;min-width:0;display:flex;justify-content:space-between;align-items:center;gap:0 24px;font:400 14px/1.3 'Inter',sans-serif;color:inherit}"
+// Steps sit at their natural width with equal space between them, rather than in equal columns
+// (which left uneven gaps because the three steps differ in length)
++ ".onmuk-help li{flex:0 1 auto;display:flex;align-items:center;gap:8px;margin:0!important;padding:0!important;min-width:0;text-wrap:balance}"
 + "@media(max-width:640px){.onmuk-help{flex-basis:100%;gap:0 10px;font-size:12px}.onmuk-help li{gap:6px}.onmuk-help li:before{width:20px;height:20px;line-height:20px;font-size:11px}}"
 + ".onmuk-help li:before{content:counter(onmuk-step);counter-increment:onmuk-step;flex:none;width:24px;height:24px;border-radius:9999px;background:#FFB300;color:#3A383D;font:700 12px/24px 'Inter',sans-serif;text-align:center}"
 + ".onmuk-help{counter-reset:onmuk-step}"
